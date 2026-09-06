@@ -1,0 +1,1258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoomMate - Smart Room Expense Management</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', "sans-serif"],
+            },
+            colors: {
+              brand: {
+                50: "#f0f5ff",
+                100: "#e5edff",
+                500: "#6366f1",
+                600: "#4f46e5",
+                700: "#4338ca",
+                800: "#3730a3",
+                900: "#312e81",
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white"
+  >
+    <!-- Toast / Alert Container -->
+    <div
+      id="toast-container"
+      class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full px-4 pointer-events-none"
+    ></div>
+
+    <!-- FORGOT PASSWORD MODAL -->
+    <div
+      id="modal-forgot-password"
+      class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-fade-in"
+    >
+      <div
+        class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden animated-gradient-border z-50"
+      >
+        <button
+          type="button"
+          onclick="closeForgotPasswordModal()"
+          class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="text-center mb-6">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center text-xl mb-3">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <h3 class="text-xl font-bold text-white">Reset Your Password</h3>
+          <p class="text-xs text-slate-400 mt-1">
+            Enter your registered email address and set a new password.
+          </p>
+        </div>
+
+        <form onsubmit="handleResetPassword(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Registered Email
+            </label>
+            <div class="relative group">
+              <i class="fa-solid fa-envelope absolute left-4 top-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors text-sm"></i>
+              <input
+                type="email"
+                id="reset-email"
+                required
+                placeholder="name@example.com"
+                class="glass-input w-full pl-11 pr-4 py-3 rounded-xl text-slate-100 placeholder-slate-600 outline-none text-sm font-medium border border-slate-800 focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              New Password
+            </label>
+            <div class="relative group">
+              <i class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors text-sm"></i>
+              <input
+                type="password"
+                id="reset-new-password"
+                required
+                minlength="6"
+                placeholder="Minimum 6 characters"
+                class="glass-input w-full pl-11 pr-11 py-3 rounded-xl text-slate-100 placeholder-slate-600 outline-none text-sm font-medium border border-slate-800 focus:border-indigo-500"
+              />
+              <button
+                type="button"
+                onclick="togglePasswordVisibility('reset-new-password', 'reset-pwd-icon')"
+                class="absolute right-3.5 top-3 text-slate-500 hover:text-slate-300 p-1 transition-colors"
+              >
+                <i id="reset-pwd-icon" class="fa-solid fa-eye text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="btn-shine w-full py-3.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all text-sm flex items-center justify-center space-x-2 cursor-pointer mt-2"
+          >
+            <span>Update Password</span>
+            <i class="fa-solid fa-check text-xs"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app" class="flex-1 flex flex-col">
+      <!-- Top Navigation Bar -->
+      <header
+        class="sticky top-0 z-40 backdrop-blur-xl bg-slate-900/80 border-b border-slate-800/80 px-4 lg:px-8 py-3.5 transition-all"
+      >
+        <div class="max-w-7xl mx-mx auto flex items-center justify-between">
+          <!-- Logo & Title -->
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30"
+            >
+              <i class="fa-solid fa-house-user text-white text-xl"></i>
+            </div>
+            <div>
+              <h1
+                class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-200 bg-clip-text text-transparent"
+              >
+                Room<span class="text-indigo-400">Mate</span>
+              </h1>
+              <p class="text-[11px] text-slate-400 font-medium">
+                Smart Expense & Room Manager
+              </p>
+            </div>
+          </div>
+
+          <!-- User Controls & Room Code Display -->
+          <div
+            id="nav-user-controls"
+            class="hidden flex items-center space-x-3"
+          >
+            <!-- Room Code Badge -->
+            <div
+              id="nav-room-badge"
+              class="hidden sm:flex items-center space-x-2 bg-indigo-950/80 border border-indigo-500/30 rounded-xl px-3 py-1.5 shadow-sm"
+            >
+              <span
+                class="text-xs text-indigo-300 font-semibold uppercase tracking-wider"
+                >Room Code:</span
+              >
+              <code
+                id="nav-room-code"
+                class="font-mono text-sm font-bold text-amber-300"
+                >------</code
+              >
+              <button
+                onclick="copyRoomCode()"
+                title="Copy Code"
+                class="text-indigo-400 hover:text-white transition-colors p-1"
+              >
+                <i class="fa-regular fa-copy"></i>
+              </button>
+            </div>
+
+            <!-- Notification / Message Bell -->
+            <button
+              onclick="switchTab('messages')"
+              class="relative p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 hover:bg-slate-700/80 text-slate-300 hover:text-white transition-all"
+            >
+              <i class="fa-solid fa-bell text-lg"></i>
+              <span
+                id="unread-count-badge"
+                class="hidden absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg shadow-rose-500/50"
+                >0</span
+              >
+            </button>
+
+            <!-- User Profile Dropdown / Username -->
+            <div
+              class="flex items-center space-x-2 bg-slate-800/60 border border-slate-700/50 rounded-xl px-3 py-1.5"
+            >
+              <div
+                class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-sm"
+              >
+                <span id="user-avatar-initials">U</span>
+              </div>
+              <span
+                id="nav-username"
+                class="text-sm font-semibold text-slate-200 hidden md:inline"
+                >User</span
+              >
+            </div>
+
+            <!-- Logout Button -->
+            <button
+              onclick="logoutUser()"
+              title="Logout"
+              class="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 hover:bg-rose-500/20 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 transition-all"
+            >
+              <i class="fa-solid fa-right-from-bracket text-lg"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Body Content Dynamic Views -->
+      <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6">
+        <!-- VIEW 1: AUTHENTICATION (Login / Register) -->
+        <section
+          id="view-auth"
+          class="py-8 lg:py-12 flex items-center justify-center min-h-[85vh] relative overflow-hidden"
+        >
+          <!-- Grid Overlay Pattern -->
+          <div class="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none"></div>
+
+          <!-- Floating Background Ambient Glowing Orbs -->
+          <div
+            class="absolute top-1/4 -left-20 w-80 h-80 bg-indigo-600/30 rounded-full blur-[120px] pointer-events-none animate-orb-1"
+          ></div>
+          <div
+            class="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-600/30 rounded-full blur-[130px] pointer-events-none animate-orb-2"
+          ></div>
+          <div
+            class="absolute top-10 right-1/3 w-72 h-72 bg-pink-600/20 rounded-full blur-[110px] pointer-events-none animate-orb-3"
+          ></div>
+
+          <div
+            class="w-full max-w-lg bg-slate-900/90 border border-slate-800/90 rounded-3xl p-8 sm:p-10 shadow-2xl backdrop-blur-2xl relative overflow-hidden animated-gradient-border z-10"
+          >
+            <!-- Top Welcome Badge -->
+            <div class="flex justify-center mb-4">
+              <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 shadow-inner">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Smart Room Expense Manager</span>
+              </span>
+            </div>
+
+            <!-- Header Branding inside Auth Card -->
+            <div class="text-center mb-8">
+              <div
+                class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-2xl shadow-indigo-500/50 mb-3 glow-logo transform hover:scale-105 transition-all duration-300"
+              >
+                <i class="fa-solid fa-house-user text-white text-3xl"></i>
+              </div>
+              <h2
+                class="text-3xl font-black tracking-tight text-white bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent"
+              >
+                Room<span class="text-indigo-400">Mate</span> Portal
+              </h2>
+              <p class="text-xs sm:text-sm text-slate-400 mt-1.5 font-medium">
+                Easily manage room expenses with your roommates!
+              </p>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div
+              class="flex rounded-2xl bg-slate-950/90 p-1.5 mb-7 border border-slate-800/90 shadow-inner"
+            >
+              <button
+                id="auth-tab-login"
+                onclick="toggleAuthTab('login')"
+                class="flex-1 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2"
+              >
+                <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                <span>Login</span>
+              </button>
+              <button
+                id="auth-tab-register"
+                onclick="toggleAuthTab('register')"
+                class="flex-1 py-3 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center space-x-2"
+              >
+                <i class="fa-solid fa-user-plus text-xs"></i>
+                <span>Sign Up (Register)</span>
+              </button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form
+              id="form-login"
+              onsubmit="handleLogin(event)"
+              class="space-y-5"
+            >
+              <div>
+                <label
+                  class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between"
+                >
+                  <span>Email Address</span>
+                  <span class="text-[10px] text-slate-500 font-normal lowercase">required</span>
+                </label>
+                <div class="relative group">
+                  <i
+                    class="fa-solid fa-envelope absolute left-4 top-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors text-sm"
+                  ></i>
+                  <input
+                    type="email"
+                    id="login-email"
+                    required
+                    placeholder="naam@example.com"
+                    class="glass-input w-full pl-11 pr-4 py-3.5 rounded-xl text-slate-100 placeholder-slate-600 outline-none text-sm font-medium border border-slate-800 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onclick="openForgotPasswordModal()"
+                    class="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+                <div class="relative group">
+                  <i
+                    class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors text-sm"
+                  ></i>
+                  <input
+                    type="password"
+                    id="login-password"
+                    required
+                    placeholder="••••••••"
+                    class="glass-input w-full pl-11 pr-11 py-3.5 rounded-xl text-slate-100 placeholder-slate-600 outline-none text-sm font-medium border border-slate-800 focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onclick="togglePasswordVisibility('login-password', 'login-pwd-icon')"
+                    class="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300 p-1 transition-colors"
+                  >
+                    <i id="login-pwd-icon" class="fa-solid fa-eye text-xs"></i>
+                  </button>
+                </div>
+              </div>
+              <button
+                type="submit"
+                class="btn-shine group w-full py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:opacity-95 text-white font-extrabold rounded-xl shadow-xl shadow-indigo-500/30 transition-all text-sm flex items-center justify-center space-x-2 cursor-pointer mt-3 active:scale-[0.99]"
+              >
+                <span>Login to Room Account</span>
+                <i class="fa-solid fa-arrow-right text-xs transition-transform group-hover:translate-x-1"></i>
+              </button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form
+              id="form-register"
+              onsubmit="handleRegister(event)"
+              class="hidden space-y-4"
+            >
+              <div>
+                <label
+                  class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5"
+                  >Full Name</label
+                >
+                <div class="relative group">
+                  <i
+                    class="fa-solid fa-user absolute left-4 top-3.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors text-sm"
+                  ></i>
+                  <input
+                    type="text"
+                    id="reg-username"
+                    required
+                    placeholder="Ex: John Doe"
+                    class="glass-input w-full pl-11 pr-4 py-3 rounded-xl text-slate-100 placeholder-slate-600 outline-none text-sm font-medium border border-slate-800 focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5"
+                  >Email Address</label
+                >
+                <div class="relative group">
+                  <i
+                    class="fa-solid fa-envelope absolute left-4 top-3.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors text-sm"
+                  ></i>
+                  <input
+                    type="email"
+                    id="reg-email"
+                    required
+                    placeholder="rahul@example.com"
+                    class="glass-input w-full pl-11 pr-4 py-3 rounded-xl text-slate-100 placeholder-slate-600 outline-none text-sm font-medium border border-slate-800 focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label
+                  class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5"
+                  >Set Password</label
+                >
+                <div class="relative group">
+                  <i
+                    class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors text-sm"
+                  ></i>
+                  <input
+                    type="password"
+                    id="reg-password"
+                    required
+                    minlength="6"
+                    placeholder="At least 6 characters"
+                    class="glass-input w-full pl-11 pr-11 py-3 rounded-xl text-slate-100 placeholder-slate-600 outline-none text-sm font-medium border border-slate-800 focus:border-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onclick="togglePasswordVisibility('reg-password', 'reg-pwd-icon')"
+                    class="absolute right-3.5 top-3 text-slate-500 hover:text-slate-300 p-1 transition-colors"
+                  >
+                    <i id="reg-pwd-icon" class="fa-solid fa-eye text-xs"></i>
+                  </button>
+                </div>
+              </div>
+              <button
+                type="submit"
+                class="btn-shine group w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-white font-extrabold rounded-xl shadow-xl shadow-teal-500/30 transition-all text-sm flex items-center justify-center space-x-2 cursor-pointer mt-3 active:scale-[0.99]"
+              >
+                <span>Create New Account</span>
+                <i class="fa-solid fa-user-plus text-xs transition-transform group-hover:scale-110"></i>
+              </button>
+            </form>
+
+            <!-- Feature Pills Footer inside Card -->
+            <div class="mt-8 pt-5 border-t border-slate-800/80 grid grid-cols-3 gap-2 text-[11px] text-slate-400 font-semibold text-center">
+              <div class="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-indigo-500/30 transition-all">
+                <i class="fa-solid fa-shield-halved text-indigo-400 text-sm mb-1"></i>
+                <span>Private Code</span>
+              </div>
+              <div class="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-amber-500/30 transition-all">
+                <i class="fa-solid fa-bolt text-amber-400 text-sm mb-1"></i>
+                <span>Live Dashboard</span>
+              </div>
+              <div class="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-950/50 border border-slate-800/60 hover:border-emerald-500/30 transition-all">
+                <i class="fa-solid fa-calculator text-emerald-400 text-sm mb-1"></i>
+                <span>Auto Settlement</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: ROOM ONBOARDING (Create or Join Room) -->
+        <section id="view-onboarding" class="hidden py-10 max-w-4xl mx-auto">
+          <div class="text-center mb-10">
+            <span
+              class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-3"
+              >Welcome to RoomMate</span
+            >
+            <h2 class="text-3xl font-extrabold text-white mb-2">
+              You Are Not in Any Room Yet
+            </h2>
+            <p class="text-slate-400 text-sm">
+              Create a new room or enter a unique Room Code to join your roommates!
+            </p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6">
+            <!-- Option A: Join Room -->
+            <div
+              class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:border-indigo-500/50 transition-all"
+            >
+              <div
+                class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mb-5 text-xl group-hover:bg-indigo-500 group-hover:text-white transition-all"
+              >
+                <i class="fa-solid fa-key"></i>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-2">
+                Join Existing Room
+              </h3>
+              <p class="text-slate-400 text-xs mb-6 leading-relaxed">
+                If your roommate already has a Room Code, enter it below to join the shared dashboard.
+              </p>
+
+              <form onsubmit="handleJoinRoom(event)" class="space-y-4">
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                    >Enter Room Code</label
+                  >
+                  <input
+                    type="text"
+                    id="join-room-code"
+                    required
+                    placeholder="Ex: 849201"
+                    class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-amber-300 font-mono font-bold tracking-wider placeholder-slate-600 outline-none text-sm uppercase"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all text-sm"
+                >
+                  Join Room
+                  <i class="fa-solid fa-right-to-bracket ml-1"></i>
+                </button>
+              </form>
+            </div>
+
+            <!-- Option B: Create Room -->
+            <div
+              class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl relative group hover:border-purple-500/50 transition-all"
+            >
+              <div
+                class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center mb-5 text-xl group-hover:bg-purple-500 group-hover:text-white transition-all"
+              >
+                <i class="fa-solid fa-plus-circle"></i>
+              </div>
+              <h3 class="text-xl font-bold text-white mb-2">
+                Create New Room
+              </h3>
+              <p class="text-slate-400 text-xs mb-6 leading-relaxed">
+                A unique Random Room Code will be generated for your new room which you can share with your roommates.
+              </p>
+
+              <form onsubmit="handleCreateRoom(event)" class="space-y-4">
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1"
+                    >Your Unique Random Room Code</label
+                  >
+                  <div class="relative flex items-center">
+                    <input
+                      type="text"
+                      id="create-room-code"
+                      readonly
+                      placeholder="Generating..."
+                      class="w-full px-4 py-3 bg-slate-950 border border-purple-500/40 rounded-xl text-amber-300 font-mono font-extrabold tracking-wider outline-none text-base cursor-default"
+                    />
+                    <button
+                      type="button"
+                      onclick="fetchNewRandomRoomCode()"
+                      title="Generate New Code"
+                      class="absolute right-2 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white rounded-lg text-xs font-semibold transition-all border border-purple-500/30 flex items-center space-x-1"
+                    >
+                      <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                      <span>Change</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1"
+                    >Room Name (Optional)</label
+                  >
+                  <input
+                    type="text"
+                    id="create-room-name"
+                    placeholder="Ex: Flat 302 / Alpha Room"
+                    class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-purple-500 text-slate-100 placeholder-slate-600 outline-none text-sm"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all text-sm"
+                >
+                  Create New Room <i class="fa-solid fa-sparkles ml-1"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: MAIN ROOM DASHBOARD -->
+        <section id="view-dashboard" class="hidden space-y-6">
+          <!-- Room Header Banner Card -->
+          <div
+            class="relative overflow-hidden bg-gradient-to-r from-indigo-900/90 via-slate-900 to-purple-900/90 border border-indigo-500/20 rounded-3xl p-6 lg:p-8 shadow-2xl backdrop-blur-xl"
+          >
+            <div
+              class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6"
+            >
+              <div>
+                <div class="flex items-center space-x-3 mb-2">
+                  <span
+                    class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                  >
+                    <i class="fa-solid fa-house text-indigo-400 mr-1"></i>
+                    Active Room Dashboard
+                  </span>
+                  <span
+                    id="current-month-pill"
+                    class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300"
+                  >
+                    Feb 2025
+                  </span>
+                </div>
+                <h2
+                  id="dashboard-room-name"
+                  class="text-2xl md:text-3xl font-extrabold text-white tracking-tight"
+                >
+                  Room Dashboard
+                </h2>
+                <p
+                  class="text-xs md:text-sm text-slate-300 mt-1 flex items-center space-x-2"
+                >
+                  <span>One shared dashboard for all room members</span>
+                </p>
+              </div>
+
+              <!-- Room Code Share Card -->
+              <div
+                class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 flex items-center space-x-4"
+              >
+                <div>
+                  <p
+                    class="text-[10px] font-bold uppercase tracking-wider text-slate-400"
+                  >
+                    Room Code (Share with roommates):
+                  </p>
+                  <code
+                    id="dashboard-room-code-display"
+                    class="font-mono text-xl font-extrabold text-amber-400"
+                    >ROOM-XXXXX</code
+                  >
+                </div>
+                <div class="flex items-center space-x-2">
+                  <button
+                    onclick="copyRoomCode()"
+                    class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/30 flex items-center space-x-1.5"
+                  >
+                    <i class="fa-regular fa-copy"></i>
+                    <span>Copy Code</span>
+                  </button>
+                  <button
+                    id="delete-room-btn"
+                    onclick="handleDeleteRoom()"
+                    class="hidden px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-600/30 flex items-center space-x-1.5"
+                  >
+                    <i class="fa-regular fa-trash-can"></i>
+                    <span>Delete Room</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI Quick Stats Grid -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total Room Expense -->
+            <div
+              class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 shadow-lg backdrop-blur-md"
+            >
+              <div
+                class="flex items-center justify-between text-slate-400 mb-2"
+              >
+                <span class="text-xs font-medium">This Month's Expenses</span>
+                <div
+                  class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm"
+                >
+                  <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+              </div>
+              <h3
+                id="stat-total-expense"
+                class="text-xl lg:text-2xl font-extrabold text-white"
+              >
+                ₹0
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-1">
+                Groceries + Fixed Bills combined
+              </p>
+            </div>
+
+            <!-- Per Head Share -->
+            <div
+              class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 shadow-lg backdrop-blur-md"
+            >
+              <div
+                class="flex items-center justify-between text-slate-400 mb-2"
+              >
+                <span class="text-xs font-medium">Per Head Share</span>
+                <div
+                  class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-sm"
+                >
+                  <i class="fa-solid fa-calculator"></i>
+                </div>
+              </div>
+              <h3
+                id="stat-per-head"
+                class="text-xl lg:text-2xl font-extrabold text-indigo-300"
+              >
+                ₹0
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-1">
+                Per member share
+              </p>
+            </div>
+
+            <!-- Fixed Bills -->
+            <div
+              class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 shadow-lg backdrop-blur-md"
+            >
+              <div
+                class="flex items-center justify-between text-slate-400 mb-2"
+              >
+                <span class="text-xs font-medium">Rent & Fixed Bills</span>
+                <div
+                  class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-sm"
+                >
+                  <i class="fa-solid fa-file-invoice-dollar"></i>
+                </div>
+              </div>
+              <h3
+                id="stat-fixed-bills"
+                class="text-xl lg:text-2xl font-extrabold text-purple-300"
+              >
+                ₹0
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-1">
+                Rent, Gas, Electric, Water
+              </p>
+            </div>
+
+            <!-- Total Roommates -->
+            <div
+              class="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 shadow-lg backdrop-blur-md"
+            >
+              <div
+                class="flex items-center justify-between text-slate-400 mb-2"
+              >
+                <span class="text-xs font-medium">Room Members</span>
+                <div
+                  class="w-8 h-8 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center text-sm"
+                >
+                  <i class="fa-solid fa-users"></i>
+                </div>
+              </div>
+              <h3
+                id="stat-members-count"
+                class="text-xl lg:text-2xl font-extrabold text-pink-300"
+              >
+                0 Members
+              </h3>
+              <p class="text-[11px] text-slate-400 mt-1">
+                Connected on this ID
+              </p>
+            </div>
+          </div>
+
+          <!-- Navigation Tabs Bar -->
+          <div
+            class="flex overflow-x-auto space-x-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl scrollbar-none"
+          >
+            <button
+              id="tab-btn-grocery"
+              onclick="switchTab('grocery')"
+              class="tab-btn active flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap"
+            >
+              <i class="fa-solid fa-basket-shopping"></i>
+              <span>Groceries & Items</span>
+            </button>
+            <button
+              id="tab-btn-bills"
+              onclick="switchTab('bills')"
+              class="tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap"
+            >
+              <i class="fa-solid fa-bolt"></i>
+              <span>Rent & Utility Bills</span>
+            </button>
+            <button
+              id="tab-btn-settlement"
+              onclick="switchTab('settlement')"
+              class="tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap"
+            >
+              <i class="fa-solid fa-scale-balanced"></i>
+              <span>Month-End Settlement</span>
+            </button>
+            <button
+              id="tab-btn-messages"
+              onclick="switchTab('messages')"
+              class="tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap relative"
+            >
+              <i class="fa-solid fa-envelope"></i>
+              <span>Messages & Alerts</span>
+              <span
+                id="tab-unread-dot"
+                class="hidden w-2 h-2 rounded-full bg-rose-500"
+              ></span>
+            </button>
+            <button
+              id="tab-btn-members"
+              onclick="switchTab('members')"
+              class="tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap"
+            >
+              <i class="fa-solid fa-user-group"></i>
+              <span>Room Members</span>
+            </button>
+          </div>
+
+          <!-- TAB CONTENT 1: GROCERY & EXPENSES -->
+          <div id="tab-content-grocery" class="tab-pane space-y-6">
+            <div class="grid lg:grid-cols-3 gap-6">
+              <!-- Left: Add Expense Form -->
+              <div
+                class="lg:col-span-1 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl h-fit"
+              >
+                <h3
+                  class="text-lg font-extrabold text-white mb-1 flex items-center space-x-2"
+                >
+                  <i class="fa-solid fa-cart-plus text-indigo-400"></i>
+                  <span>Add Item Expense</span>
+                </h3>
+                <p class="text-xs text-slate-400 mb-5">
+                  Record expenses for items bought from the market here.
+                </p>
+
+                <form onsubmit="handleAddExpense(event)" class="space-y-4">
+                  <div>
+                    <label
+                      class="block text-xs font-semibold text-slate-300 mb-1"
+                      >Item Name</label
+                    >
+                    <input
+                      type="text"
+                      id="expense-item-name"
+                      required
+                      placeholder="Ex: Flour, Milk, Cooking Oil, Vegetables"
+                      class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-indigo-500 text-slate-100 placeholder-slate-600 outline-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="block text-xs font-semibold text-slate-300 mb-1"
+                      >Price (₹)</label
+                    >
+                    <div class="relative">
+                      <span
+                        class="absolute left-4 top-2.5 text-slate-400 font-bold"
+                        >₹</span
+                      >
+                      <input
+                        type="number"
+                        step="0.5"
+                        id="expense-amount"
+                        required
+                        placeholder="250"
+                        class="w-full pl-8 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-indigo-500 text-slate-100 placeholder-slate-600 outline-none text-sm font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      class="block text-xs font-semibold text-slate-300 mb-1"
+                      >Select Category</label
+                    >
+                    <select
+                      id="expense-category"
+                      class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-indigo-500 text-slate-200 outline-none text-sm"
+                    >
+                      <option value="Grocery">🛒 Grocery / Ration</option>
+                      <option value="Vegetables">🥦 Vegetables & Fruits</option>
+                      <option value="Snacks">🍿 Snacks & Tea</option>
+                      <option value="Room Rent">🏠 Room Rent Paid</option>
+                      <option value="Electric Bill">⚡ Electric Bill Paid</option>
+                      <option value="Gas Bill">🔥 Gas / Cylinder Bill</option>
+                      <option value="Water Bill">💧 Water Bill Paid</option>
+                      <option value="Household">🧹 Cleaning / Household</option>
+                      <option value="Utilities">💡 Utilities & Others</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      class="block text-xs font-semibold text-slate-300 mb-1"
+                      >Date</label
+                    >
+                    <input
+                      type="date"
+                      id="expense-date"
+                      required
+                      class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:border-indigo-500 text-slate-200 outline-none text-sm"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/25 transition-all text-sm flex items-center justify-center space-x-2"
+                  >
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Add to Expense List</span>
+                  </button>
+                </form>
+              </div>
+
+              <!-- Right: Expenses List Table & Filter -->
+              <div class="lg:col-span-2 space-y-4">
+                <!-- Filter & Search Bar -->
+                <div
+                  class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3"
+                >
+                  <div class="flex items-center space-x-3 w-full sm:w-auto">
+                    <i class="fa-solid fa-calendar-days text-indigo-400"></i>
+                    <input
+                      type="month"
+                      id="filter-month"
+                      onchange="loadExpenses()"
+                      class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 outline-none"
+                    />
+                  </div>
+                  <div class="relative w-full sm:w-64">
+                    <i
+                      class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"
+                    ></i>
+                    <input
+                      type="text"
+                      id="search-expense-input"
+                      onkeyup="filterExpenseList()"
+                      placeholder="Search by item or purchaser name..."
+                      class="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <!-- List Container -->
+                <div
+                  class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl overflow-hidden"
+                >
+                  <h4
+                    class="text-sm font-bold text-slate-300 mb-4 flex items-center justify-between"
+                  >
+                    <span>Items & Price List</span>
+                    <span
+                      id="expense-count-badge"
+                      class="text-xs bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full"
+                      >0 items</span
+                    >
+                  </h4>
+
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                      <thead
+                        class="bg-slate-950/80 text-slate-400 uppercase font-bold text-[10px] tracking-wider border-b border-slate-800"
+                      >
+                        <tr>
+                          <th class="py-3 px-4">Item Name</th>
+                          <th class="py-3 px-4">Purchased By</th>
+                          <th class="py-3 px-4">Price (₹)</th>
+                          <th class="py-3 px-4">Date</th>
+                          <th class="py-3 px-4 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody
+                        id="expense-table-body"
+                        class="divide-y divide-slate-800/60 text-slate-200 font-medium"
+                      >
+                        <!-- Dynamic Rows -->
+                        <tr>
+                          <td
+                            colspan="5"
+                            class="text-center py-8 text-slate-500"
+                          >
+                            Loading expense list...
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT 2: FIXED MONTHLY BILLS -->
+          <div id="tab-content-bills" class="tab-pane hidden space-y-6">
+            <div
+              class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 lg:p-8 shadow-xl"
+            >
+              <div class="max-w-3xl">
+                <h3
+                  class="text-xl font-extrabold text-white mb-1 flex items-center space-x-2"
+                >
+                  <i class="fa-solid fa-file-invoice text-purple-400"></i>
+                  <span>Room Rent & Monthly Utility Bills</span>
+                </h3>
+                <p class="text-xs text-slate-400 mb-6">
+                  Fixed monthly expenses shared equally among all room members.
+                </p>
+
+                <form onsubmit="handleUpdateBills(event)" class="space-y-6">
+                  <div class="grid sm:grid-cols-2 gap-4">
+                    <div
+                      class="bg-slate-950 border border-slate-800 rounded-2xl p-4"
+                    >
+                      <div class="flex items-center space-x-3 mb-2">
+                        <div
+                          class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center"
+                        >
+                          <i class="fa-solid fa-building text-sm"></i>
+                        </div>
+                        <label class="text-xs font-bold text-slate-200"
+                          >Room Rent (₹)</label
+                        >
+                      </div>
+                      <input
+                        type="number"
+                        step="1"
+                        id="bills-rent"
+                        placeholder="6000"
+                        class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-white focus:border-indigo-500 outline-none"
+                      />
+                    </div>
+
+                    <div
+                      class="bg-slate-950 border border-slate-800 rounded-2xl p-4"
+                    >
+                      <div class="flex items-center space-x-3 mb-2">
+                        <div
+                          class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center"
+                        >
+                          <i class="fa-solid fa-fire text-sm"></i>
+                        </div>
+                        <label class="text-xs font-bold text-slate-200"
+                          >Gas Bill / Cylinder (₹)</label
+                        >
+                      </div>
+                      <input
+                        type="number"
+                        step="1"
+                        id="bills-gas"
+                        placeholder="1000"
+                        class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-white focus:border-indigo-500 outline-none"
+                      />
+                    </div>
+
+                    <div
+                      class="bg-slate-950 border border-slate-800 rounded-2xl p-4"
+                    >
+                      <div class="flex items-center space-x-3 mb-2">
+                        <div
+                          class="w-8 h-8 rounded-xl bg-yellow-500/10 text-yellow-400 flex items-center justify-center"
+                        >
+                          <i class="fa-solid fa-bolt text-sm"></i>
+                        </div>
+                        <label class="text-xs font-bold text-slate-200"
+                          >Electric Bill (₹)</label
+                        >
+                      </div>
+                      <input
+                        type="number"
+                        step="1"
+                        id="bills-electricity"
+                        placeholder="1500"
+                        class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-white focus:border-indigo-500 outline-none"
+                      />
+                    </div>
+
+                    <div
+                      class="bg-slate-950 border border-slate-800 rounded-2xl p-4"
+                    >
+                      <div class="flex items-center space-x-3 mb-2">
+                        <div
+                          class="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center"
+                        >
+                          <i class="fa-solid fa-droplet text-sm"></i>
+                        </div>
+                        <label class="text-xs font-bold text-slate-200"
+                          >Water Bill (₹)</label
+                        >
+                      </div>
+                      <input
+                        type="number"
+                        step="1"
+                        id="bills-water"
+                        placeholder="300"
+                        class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm font-bold text-white focus:border-indigo-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-purple-600/30 transition-all"
+                  >
+                    Update Bill Details
+                    <i class="fa-solid fa-floppy-disk ml-1"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT 3: MONTH-END SETTLEMENT -->
+          <div id="tab-content-settlement" class="tab-pane hidden space-y-6">
+            <div
+              class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 lg:p-8 shadow-xl"
+            >
+              <div
+                class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800 pb-6"
+              >
+                <div>
+                  <h3
+                    class="text-xl font-extrabold text-white mb-1 flex items-center space-x-2"
+                  >
+                    <i class="fa-solid fa-scale-balanced text-emerald-400"></i>
+                    <span>Month-End Calculator & Debt Settlement</span>
+                  </h3>
+                  <p class="text-xs text-slate-400">
+                    Automatic calculation of how much each member needs to pay or receive.
+                  </p>
+                </div>
+
+                <button
+                  onclick="finalizeMonthSettlement()"
+                  class="px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-white font-bold rounded-xl text-sm shadow-lg shadow-teal-500/30 transition-all flex items-center space-x-2"
+                >
+                  <i class="fa-solid fa-paper-plane"></i>
+                  <span>Finalize Month-End & Send Messages</span>
+                </button>
+              </div>
+
+              <!-- Information Helper Tip -->
+              <div class="bg-indigo-950/50 border border-indigo-500/30 rounded-2xl p-4 mb-6 text-xs text-indigo-200 flex items-start space-x-3">
+                <i class="fa-solid fa-lightbulb text-amber-400 text-base mt-0.5"></i>
+                <div class="leading-relaxed">
+                  <span class="font-bold text-white">How it works:</span>
+                  All Groceries, Vegetables, and Rent/Bills paid by room members are calculated automatically. If you paid Rent or Electricity to the landlord, add it under the 'Groceries & Items' tab with category 'Room Rent'. The system automatically calculates who owes how much!
+                </div>
+              </div>
+
+              <!-- Individual Member Status Cards -->
+              <div class="mb-8">
+                <h4
+                  class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4"
+                >
+                  Member Balance Breakdown:
+                </h4>
+                <div
+                  id="settlement-members-grid"
+                  class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                >
+                  <!-- Dynamic Settlement Cards -->
+                </div>
+              </div>
+
+              <!-- Who Gives How Much to Whom (Debt Settlement Matrix) -->
+              <div
+                class="bg-slate-950 border border-slate-800/80 rounded-2xl p-6"
+              >
+                <h4
+                  class="text-sm font-bold text-amber-400 mb-3 flex items-center space-x-2"
+                >
+                  <i class="fa-solid fa-hand-holding-dollar"></i>
+                  <span
+                    >Who Pays Whom? (Exact Money Transfers)</span
+                  >
+                </h4>
+                <div id="transactions-list" class="space-y-3">
+                  <!-- Dynamic Transaction Instructions -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT 4: MESSAGES & ID NOTIFICATIONS -->
+          <div id="tab-content-messages" class="tab-pane hidden space-y-6">
+            <div
+              class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 lg:p-8 shadow-xl"
+            >
+              <h3
+                class="text-xl font-extrabold text-white mb-1 flex items-center space-x-2"
+              >
+                <i class="fa-solid fa-bell-concierge text-indigo-400"></i>
+                <span>Room Messages & Statements</span>
+              </h3>
+              <p class="text-xs text-slate-400 mb-6">
+                Find final monthly bill statements and room alerts here.
+              </p>
+
+              <!-- Direct Room Chat Box -->
+              <form
+                onsubmit="handleSendRoomChat(event)"
+                class="mb-6 flex gap-2"
+              >
+                <input
+                  type="text"
+                  id="chat-input-text"
+                  required
+                  placeholder="Type a message for your roommates..."
+                  class="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 outline-none focus:border-indigo-500"
+                />
+                <button
+                  type="submit"
+                  class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center space-x-1"
+                >
+                  <span>Send</span>
+                  <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+              </form>
+
+              <!-- Messages Feed Container -->
+              <div
+                id="messages-container"
+                class="space-y-3 max-h-[500px] overflow-y-auto pr-2"
+              >
+                <!-- Dynamic Messages -->
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT 5: ROOM MEMBERS LIST -->
+          <div id="tab-content-members" class="tab-pane hidden space-y-6">
+            <div
+              class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 lg:p-8 shadow-xl"
+            >
+              <h3
+                class="text-xl font-extrabold text-white mb-1 flex items-center space-x-2"
+              >
+                <i class="fa-solid fa-users text-pink-400"></i>
+                <span>All Room Members</span>
+              </h3>
+              <p class="text-xs text-slate-400 mb-6">
+                All roommates can log in from their devices to view and share this dashboard.
+              </p>
+
+              <div
+                id="members-list-grid"
+                class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              >
+                <!-- Dynamic Member Cards -->
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer
+        class="border-t border-slate-800/60 py-4 text-center text-xs text-slate-500"
+      >
+        <p>RoomMate - Smart Room & Expense Management System © 2025</p>
+      </footer>
+    </div>
+
+    <!-- App JavaScript -->
+    <script src="/static/js/app.js"></script>
+  </body>
+</html>
