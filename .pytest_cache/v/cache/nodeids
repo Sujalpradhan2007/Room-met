@@ -1,0 +1,4 @@
+[
+  "tests/test_room_delete.py::test_host_can_remove_member_from_room",
+  "tests/test_room_delete.py::test_room_delete_only_for_host"
+]
