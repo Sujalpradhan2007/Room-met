@@ -9,10 +9,18 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-only-change-me')
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 CORS(app)
 
-DB_NAME = 'room_management.db'
+# Use an absolute, configurable path so the app works from any deployment directory.
+DB_NAME = os.environ.get(
+    'DATABASE_PATH',
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'room_management.db')
+)
+
 
 def get_db():
     conn = sqlite3.connect(DB_NAME)
@@ -812,5 +820,5 @@ def mark_read(msg_id):
 
 
 if __name__ == '__main__':
-    print("🚀 Room Management Website Starting on http://127.0.0.1:5000")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_DEBUG') == '1')
